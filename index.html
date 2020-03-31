@@ -1,90 +1,105 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+<head>
+    <link href="https://unpkg.com/tabulator-tables@4.6.0/dist/css/tabulator.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.6.0/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+</head>
 
-<style>
-    #overlay {
-        position: fixed;
-        /* Sit on top of the page content */
-        display: block;
-        /* Hidden by default */
-        width: 100%;
-        /* Full width (cover the whole page) */
-        height: 100%;
-        /* Full height (cover the whole page) */
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        /* Black background with opacity */
-        z-index: 2;
-        /* Specify a stack order in case you're using a different order for other elements */
-        cursor: pointer;
-        /* Add a pointer on hover */
-    }
 
-    #overlayText {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        font-size: 50px;
-        color: white;
-        transform: translate(-50%, -50%);
-        -ms-transform: translate(-50%, -50%);
-    }
-</style>
-
-<div id="overlay">
-    <div id="overlayText">
-        Fetching data...
+<body>
+    <style>
+        #overlay {
+            position: fixed;
+            /* Sit on top of the page content */
+            display: block;
+            /* Hidden by default */
+            width: 100%;
+            /* Full width (cover the whole page) */
+            height: 100%;
+            /* Full height (cover the whole page) */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            /* Black background with opacity */
+            z-index: 2;
+            /* Specify a stack order in case you're using a different order for other elements */
+            cursor: pointer;
+            /* Add a pointer on hover */
+        }
+    
+        #overlayText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 50px;
+            color: white;
+            transform: translate(-50%, -50%);
+            -ms-transform: translate(-50%, -50%);
+        }
+    </style>
+    
+    <div id="overlay">
+        <div id="overlayText">
+            Fetching data...
+        </div>
     </div>
-</div>
-<div id="chartDiv">
-    <canvas id="chart" width="1200" height="600" style="border:1px solid">
-    </canvas>
-</div>
+    <div id="chartDiv">
+        <canvas id="chart" width="1200" height="600" style="border:1px solid">
+        </canvas>
+    </div>
+    
+    <div>
+        Data used for parameter estimation:
+        <label for="latest">Latest</label>
+        <input type="radio" name="EstimationMode" id="opt_latest" class="inputs">
+    
+        <label for="min">Last 5</label>
+        <input type="radio" name="EstimationMode" class="inputs" id="opt_last5">
+    
+        <label for="max">Last 14</label>
+        <input type="radio" name="EstimationMode" class="inputs" id="opt_last14">
+    
+        <label for="mean">Mean</label>
+        <input type="radio" name="EstimationMode" class="inputs" id="opt_mean" checked>
+    </div>
+    <br />
+    
+    Estimated parameters:
+    <div title="Contact rate (Infection constant)">
+        <b>β</b> = <span id="betaText">-</span>
+    </div>
+    <div title="Recovery constant">
+        <b>α</b> = <span id="alphaText">-</span>
+    </div>
+    <div title="Basic Reproduction Number, beta/alpha">
+        <a href="https://en.wikipedia.org/wiki/Basic_reproduction_number"
+            style="text-decoration:none;"><b>R</b><sub>0</sub></a> =
+        <span id="R0Text">-</span>
+    </div>
+    <div title="Initial infective population">
+        I<sub>0</sub> = <span id="I0Text">-</span>
+    </div>
+    <br />
+    
+    Inputs:
+    <div>
+        Country
+        <select id="sel_countries" class="inputs">
+            <option value="all">Global</option>
+        </select>
+        <input type="number" id="N" class="inputs" value=7e9 min=10 title="Total population" disabled>
+    </div>
+    <div>
+        <label for="maxTime">Max. Time</label>
+        <input type="number" id="maxTime" class="inputs" value=365 title="Duration to simulate">
+    </div>
+    <br/>
 
-<div>
-    Data used for parameter estimation:
-    <label for="latest">Latest</label>
-    <input type="radio" name="EstimationMode" id="opt_latest" class="inputs" checked=true>
+    <label for="chkShowTable">Show table</label>
+    <input type="checkbox" id="chkShowTable" onclick="toggleTableVisibility();" autocomplete="off">
 
-    <label for="min">Last 5</label>
-    <input type="radio" name="EstimationMode" class="inputs" id="opt_last5">
-
-    <label for="max">Last 14</label>
-    <input type="radio" name="EstimationMode" class="inputs" id="opt_last14">
-
-    <label for="mean">Mean</label>
-    <input type="radio" name="EstimationMode" class="inputs" id="opt_mean">
-</div>
-<br />
-
-Estimated parameters:
-<div title="Contact rate (Infection constant)">
-    <b>β</b> = <span id="betaText">-</span>
-</div>
-<div title="Recovery constant">
-    <b>α</b> = <span id="alphaText">-</span>
-</div>
-<div title="Basic Reproduction Number, beta/alpha">
-    <a href="https://en.wikipedia.org/wiki/Basic_reproduction_number"
-        style="text-decoration:none;"><b>R</b><sub>0</sub></a> =
-    <span id="R0Text">-</span>
-</div>
-<br />
-
-Inputs:
-<div>
-    <label for="I0">I<sub>0</sub></label>
-    <input type="number" class="inputs" id="I0" value=510 min=1 title="Initial infected population">
-</div>
-<div>
-    <label for="N">N</label>
-    <input type="number" id="N" class="inputs" value=7e9 min=10 title="Total population">
-</div>
-<div>
-    <label for="maxTime">Max. Time</label>
-    <input type="number" id="maxTime" class="inputs" value=365 title="Duration to simulate">
-</div>
-
-<script src="main.js"></script>
+    <div id="dataTableHolder" style="display:none;" ></div>
+    
+    <script src="main.js"></script>
+</body>
